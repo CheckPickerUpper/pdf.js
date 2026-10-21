@@ -17,6 +17,7 @@ import { buildGetDocumentParams } from "./test_utils.js";
 import { getDocument } from "../../src/display/api.js";
 import { isNodeJS } from "../../src/shared/util.js";
 import { TextLayer } from "../../src/display/text_layer.js";
+import { TextLayerBuilder } from "../../web/text_layer_builder.js";
 
 describe("textLayer", function () {
   it("creates textLayer from ReadableStream", async function () {
@@ -250,5 +251,55 @@ describe("textLayer", function () {
     expect(transform2).toEqual(serialTransform2);
 
     await loadingTask.destroy();
+  });
+});
+
+describe("textLayerBuilder global selection", function () {
+  // @behavior pdfjs.selection.surviving-viewer
+  // @boundary before=two rendered layers at=first viewer aborts
+  // after=the surviving viewer releases its selection
+  // @red the first viewer's abort removes the second viewer's listeners
+  // @green listeners live until the last registered layer is removed
+  it("keeps the remaining viewer's selection listeners after another viewer closes", async function () {
+    const loadingTask = getDocument(buildGetDocumentParams("basicapi.pdf"));
+    const pdfDocument = await loadingTask.promise;
+    const pdfPage = await pdfDocument.getPage(1);
+    const firstViewer = new AbortController();
+    const secondViewer = new AbortController();
+    const firstLayer = new TextLayerBuilder({
+      pdfPage,
+      abortSignal: firstViewer.signal,
+    });
+    const secondLayer = new TextLayerBuilder({
+      pdfPage,
+      abortSignal: secondViewer.signal,
+    });
+    document.body.append(firstLayer.div, secondLayer.div);
+    try {
+      const viewport = pdfPage.getViewport({ scale: 1 });
+      await firstLayer.render({ viewport });
+      await secondLayer.render({ viewport });
+      firstViewer.abort();
+      firstLayer.cancel();
+      firstLayer.div.remove();
+      secondLayer.div.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true })
+      );
+      secondLayer.div.dispatchEvent(
+        new MouseEvent("mousedown", { bubbles: true })
+      );
+      expect(secondLayer.div.classList.contains("selecting")).toBeTrue();
+      secondLayer.div.dispatchEvent(
+        new PointerEvent("pointerup", { bubbles: true })
+      );
+      expect(secondLayer.div.classList.contains("selecting")).toBeFalse();
+    } finally {
+      firstLayer.cancel();
+      secondLayer.cancel();
+      secondViewer.abort();
+      firstLayer.div.remove();
+      secondLayer.div.remove();
+      await loadingTask.destroy();
+    }
   });
 });

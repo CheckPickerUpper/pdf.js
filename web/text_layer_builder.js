@@ -57,6 +57,10 @@ class TextLayerBuilder {
 
   #renderingDone = false;
 
+  #removeSelectionOnAbort = () => {
+    TextLayerBuilder.#removeGlobalSelectionListener(this.div);
+  };
+
   #textLayer = null;
 
   static #textLayers = new Map();
@@ -160,6 +164,10 @@ class TextLayerBuilder {
 
     this.highlighter?.disable();
     this.accessibilityManager?.disable();
+    this.#abortSignal?.removeEventListener(
+      "abort",
+      this.#removeSelectionOnAbort
+    );
     TextLayerBuilder.#removeGlobalSelectionListener(this.div);
   }
 
@@ -171,6 +179,9 @@ class TextLayerBuilder {
   #bindMouse(end) {
     const { div } = this;
     const abortSignal = this.#abortSignal;
+    if (abortSignal?.aborted) {
+      return;
+    }
     const opts = abortSignal ? { signal: abortSignal } : null;
 
     div.addEventListener(
@@ -197,7 +208,10 @@ class TextLayerBuilder {
     );
 
     TextLayerBuilder.#textLayers.set(div, end);
-    TextLayerBuilder.#enableGlobalSelectionListener(abortSignal);
+    abortSignal?.addEventListener("abort", this.#removeSelectionOnAbort, {
+      once: true,
+    });
+    TextLayerBuilder.#enableGlobalSelectionListener();
   }
 
   static #removeGlobalSelectionListener(textLayerDiv) {
@@ -209,15 +223,12 @@ class TextLayerBuilder {
     }
   }
 
-  static #enableGlobalSelectionListener(globalAbortSignal) {
+  static #enableGlobalSelectionListener() {
     if (this.#selectionChangeAC) {
       // document-level event listeners already installed
       return;
     }
-    this.#selectionChangeAC = new AbortController();
-    const signal = globalAbortSignal
-      ? AbortSignal.any([this.#selectionChangeAC.signal, globalAbortSignal])
-      : this.#selectionChangeAC.signal;
+    const { signal } = (this.#selectionChangeAC = new AbortController());
 
     const reset = (end, textLayer) => {
       if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
