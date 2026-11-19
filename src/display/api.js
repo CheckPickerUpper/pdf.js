@@ -1245,6 +1245,7 @@ class PDFDocumentProxy {
  * @property {string} name - Font family name.
  * @property {Uint8Array} data - TrueType font.
  * @property {number} ascent - Fraction of the em above the baseline.
+ * @property {number} unitsPerEm - Integer advance grid used by the font.
  */
 
 /**

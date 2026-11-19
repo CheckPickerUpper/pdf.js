@@ -384,6 +384,7 @@ class TextLayer {
       hasText: geom.str !== "",
       hasEOL: geom.hasEOL,
       fontSize: 0,
+      textLayerFont: null,
     };
     this.#textDivs.push(textDiv);
 
@@ -409,6 +410,7 @@ class TextLayer {
       // The other fonts are only used for the characters missing in it.
       fontFamily = `"${textLayerFont.name}", ${fontFamily}`;
       ascent = textLayerFont.ascent;
+      textDivProperties.textLayerFont = textLayerFont;
     }
     const fontHeight = Math.hypot(tx[2], tx[3]);
     const fontAscent =
@@ -494,16 +496,28 @@ class TextLayer {
   #layout(params) {
     const { div, properties, ctx } = params;
     const { style } = div;
-    const { canvasWidth, fontSize } = properties;
-
-    if (canvasWidth !== 0 && fontSize !== 0 && properties.hasText) {
-      const { fontFamily } = style;
+    const { canvasWidth, fontSize, textLayerFont } = properties;
+    let measuredSize;
+    if (textLayerFont) {
+      // At one CSS pixel per font unit, integer-metric renderers preserve
+      // every generated advance. Scale the whole span to the viewport size.
+      measuredSize = textLayerFont.unitsPerEm;
+      style.fontSize = `${measuredSize}px`;
+      style.setProperty(
+        "--min-font-size-inv",
+        `calc(var(--total-scale-factor) * ${fontSize / measuredSize})`
+      );
+    } else {
       // Firefox quantizes canvas font sizes after dividing by the device-pixel
       // ratio. Measure at a quantized size, then rescale the width.
       const pixelRatio = this.#pixelRatio;
-      const measuredSize =
+      measuredSize =
         TextLayer.#quantizeFontSize((fontSize * this.#scale) / pixelRatio) *
         pixelRatio;
+    }
+
+    if (canvasWidth !== 0 && fontSize !== 0 && properties.hasText) {
+      const { fontFamily } = style;
 
       TextLayer.#ensureCtxFont(ctx, measuredSize, fontFamily);
       // Only measure the width for multi-char text divs, see `appendText`.

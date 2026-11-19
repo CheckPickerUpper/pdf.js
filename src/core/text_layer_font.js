@@ -418,6 +418,7 @@ class TextLayerFonts {
       name: `${this.#idFactory.getDocId()}_t${this.#idFactory.createFontId()}`,
       data,
       ascent,
+      unitsPerEm: UNITS_PER_EM,
     };
   }
 

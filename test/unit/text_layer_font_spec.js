@@ -141,13 +141,14 @@ describe("text layer font", function () {
   });
 
   it("gets the most frequent advance of a character", function () {
-    const { name, data, ascent } = getTextLayerFont([
+    const { name, data, ascent, unitsPerEm } = getTextLayerFont([
       ["a", 500],
       ["a", 600],
       ["a", 500],
     ]);
     expect(name).toEqual("g_d0_tf1");
     expect(ascent).toEqual(0.8);
+    expect(unitsPerEm).toEqual(new FontTestData(data).unitsPerEm);
     // The text layer can have spaces which aren't in the PDF.
     expectAdvances(new FontTestData(data), [
       [0x61, 500],
