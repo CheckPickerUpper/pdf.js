@@ -1,6 +1,25 @@
 {
   "name": "pdf.js",
+  "version": "0.0.0",
   "type": "module",
+  "main": "build/dist/build/pdf.mjs",
+  "types": "build/dist/types/src/pdf.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/dist/types/src/pdf.d.ts",
+      "default": "./build/dist/build/pdf.mjs"
+    },
+    "./*": "./build/dist/*"
+  },
+  "files": [
+    "build/dist"
+  ],
+  "scripts": {
+    "prepare": "gulp dist"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas": "^1.1.1"
+  },
   "devDependencies": {
     "@babel/core": "^8.1.2",
     "@babel/preset-env": "^8.0.7",
@@ -8,7 +27,6 @@
     "@eslint/json": "^2.1.1",
     "@fluent/bundle": "^0.19.1",
     "@fluent/dom": "^0.10.2",
-    "@napi-rs/canvas": "^1.1.1",
     "@types/node": "^26.6.6",
     "autoprefixer": "^10.6.2",
     "babel-loader": "^10.1.1",
